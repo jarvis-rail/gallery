@@ -1,0 +1,72 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gallery
+  namespace: gallery
+  labels:
+    app: gallery
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: gallery
+  template:
+    metadata:
+      labels:
+        app: gallery
+    spec:
+      containers:
+      - name: gallery
+        image: nginx:1.27-alpine
+        ports:
+        - containerPort: 80
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 15
+          periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gallery
+  namespace: gallery
+  labels:
+    app: gallery
+spec:
+  selector:
+    app: gallery
+  ports:
+  - name: http
+    port: 80
+    targetPort: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: gallery
+  namespace: gallery
+  annotations:
+    external-dns.alpha.kubernetes.io/hostname: gallery.railk8s.us
+    external-dns.alpha.kubernetes.io/target: 6f35a7eb-bc15-49b2-ba37-7865a40ef522.cfargotunnel.com
+    external-dns.alpha.kubernetes.io/cloudflare-proxied: "true"
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: gallery.railk8s.us
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: gallery
+            port:
+              number: 80
